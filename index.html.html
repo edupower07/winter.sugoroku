@@ -1,0 +1,839 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>冬休みすごろく（豪華デザイン版）</title>
+    <style>
+        /* --- 基本設定 --- */
+        body {
+            font-family: "UD Digital Kyokasho-tai NK-R", "UD Digi Kyokasho NK-R", "BIZ UDPGothic", "Hiragino Maru Gothic ProN", sans-serif;
+            margin: 0; padding: 0;
+            background: linear-gradient(120deg, #a1c4fd 0%, #c2e9fb 100%);
+            color: #444; overflow: hidden;
+            display: flex; flex-direction: column; height: 100vh; width: 100vw;
+        }
+
+        /* 雪のアニメーション */
+        .snowflake {
+            position: absolute; top: -10px; color: #fff; font-size: 1em; opacity: 0.9;
+            pointer-events: none; animation: fall linear infinite; z-index: 1;
+            text-shadow: 0 0 2px #a1c4fd;
+        }
+        @keyframes fall { to { transform: translateY(105vh) rotate(360deg); } }
+
+        /* --- スタート画面 --- */
+        #setup-screen {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            z-index: 100; background: rgba(255, 255, 255, 0.6); backdrop-filter: blur(8px);
+        }
+
+        /* タイトル */
+        h1 {
+            font-size: 4rem; color: #fff; margin-bottom: 30px; font-weight: 900; line-height: 1.2; text-align: center;
+            text-shadow: 3px 3px 0px #29b6f6, -3px -3px 0px #ff8a80, 0px 0px 15px rgba(0,0,0,0.2);
+            font-style: normal; letter-spacing: 2px;
+        }
+        .title-icon { font-size: 3rem; vertical-align: middle; text-shadow: none; margin: 0 10px; }
+
+        .setup-box {
+            background: #fff; padding: 40px; border-radius: 30px;
+            box-shadow: 0 10px 40px rgba(33, 150, 243, 0.3);
+            text-align: center; max-width: 600px; width: 90%;
+            border: 6px solid #e3f2fd;
+        }
+
+        .step-title { font-size: 1.4rem; margin-bottom: 20px; color: #1976d2; font-weight: bold; }
+        .player-select-group { display: flex; gap: 15px; justify-content: center; flex-wrap: wrap; margin-bottom: 20px; }
+        
+        .p-btn {
+            width: 70px; height: 70px; font-size: 1.8rem; border-radius: 50%;
+            border: 3px solid #fff; background: #f0f4c3; color: #827717;
+            cursor: pointer; box-shadow: 0 4px 0 #c0ca33;
+            transition: transform 0.1s; font-family: inherit; font-weight: bold;
+        }
+        .p-btn:active { transform: translateY(4px); box-shadow: none; }
+        .p-btn:hover { background: #fff59d; }
+
+        #name-input-area { display: none; margin-top: 20px; text-align: left; max-height: 300px; overflow-y: auto; }
+        .input-row { margin-bottom: 10px; display: flex; align-items: center; gap: 10px; }
+        .player-label { font-weight: bold; width: 40px; text-align: center; font-size: 1.2rem; }
+        .name-input {
+            flex: 1; padding: 10px; border: 2px solid #b3e5fc; border-radius: 10px;
+            font-size: 1.2rem; font-family: inherit; outline: none; background: #f1f8e9;
+        }
+
+        /* --- ボタン類 --- */
+        .btn {
+            background: #fff; border: none; color: #555;
+            padding: 10px 20px; font-size: 1.1rem; border-radius: 50px;
+            cursor: pointer; box-shadow: 0 4px 0 #89c4f4, 0 5px 10px rgba(0,0,0,0.1);
+            transition: all 0.1s; font-weight: bold; font-family: inherit;
+            margin: 5px; position: relative; top: 0;
+        }
+        .btn:active { top: 4px; box-shadow: 0 0 0 #89c4f4, inset 0 2px 5px rgba(0,0,0,0.1); }
+        .btn.primary {
+            background: #ff9a9e; color: white;
+            box-shadow: 0 4px 0 #ff758c, 0 5px 10px rgba(255, 117, 140, 0.4);
+            font-size: 1.5rem; padding: 15px 40px;
+        }
+        .btn.primary:active { box-shadow: 0 0 0 #ff758c; }
+        .btn.win { background: #ffd54f; color: #d84315; box-shadow: 0 4px 0 #f9a825; font-size: 1.5rem; padding: 15px 30px; }
+        .btn.lose { background: #90a4ae; color: #fff; box-shadow: 0 4px 0 #546e7a; font-size: 1.5rem; padding: 15px 30px; }
+
+        /* --- ゲーム画面 --- */
+        #game-screen {
+            display: none; flex-direction: column; height: 100vh; width: 100vw;
+            box-sizing: border-box; padding: 5px; z-index: 10;
+        }
+        
+        #board {
+            flex: 1; min-height: 0;
+            display: grid;
+            grid-template-columns: repeat(8, 1fr); /* 8列 */
+            grid-template-rows: repeat(6, 1fr);    /* 6行 */
+            gap: 4px; padding: 5px;
+            background: rgba(255, 255, 255, 0.85);
+            border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            border: 3px solid #fff; position: relative;
+            direction: rtl; /* 全体の配置順序（右から） */
+        }
+
+        .cell {
+            background-color: #fff; border: 1px solid #b3e5fc; border-radius: 6px;
+            position: relative; display: flex; flex-direction: column; align-items: center;
+            /* overflow: hidden; ← アイコンをはみ出させるために削除 */
+            box-shadow: inset 0 0 5px #f0fbff; transition: all 0.3s;
+            direction: ltr; /* 文字の向きは左から */
+        }
+        .cell.has-player {
+            background-color: #ffe0e0; border-color: #ff5252;
+            box-shadow: inset 0 0 10px rgba(255, 82, 82, 0.3);
+            z-index: 5; transform: scale(1.02);
+        }
+
+        /* ★★★ スタート・ゴールのデザイン変更ここから ★★★ */
+        .cell.start {
+            /* 明るい黄色系の放射グラデーション */
+            background: radial-gradient(circle at center, #fff9c4 0%, #fff59d 50%, #fbc02d 100%);
+            border: 3px solid #f9a825; /* 金色の枠 */
+            color: #e65100;
+            font-weight: 900; font-size: 1.1rem;
+            justify-content: center;
+            /* 文字の白縁取りと影 */
+            text-shadow: 2px 2px 0 #fff, 3px 3px 4px rgba(0,0,0,0.2);
+            /* 全体の発光感 */
+            box-shadow: 0 0 15px rgba(255, 215, 0, 0.5), inset 0 0 10px #fff;
+        }
+        /* スタートのキラキラアイコン */
+        .cell.start::before {
+            content: "✨"; position: absolute; top: -8px; left: -8px;
+            font-size: 1.4rem; text-shadow: 0 0 5px yellow; z-index: 1;
+        }
+
+        .cell.goal {
+            /* 赤から金への豪華なグラデーション */
+            background: linear-gradient(135deg, #ffccbc 0%, #ffab91 30%, #ffd54f 70%, #ffe082 100%);
+            border: 4px double #d84315; /* 豪華な二重線 */
+            color: #bf360c;
+            font-weight: 900; font-size: 1.2rem;
+            justify-content: center;
+            /* 文字の豪華な影 */
+            text-shadow: 1px 1px 0 #ffd54f, 2px 2px 0 #ff8f00, 3px 3px 6px rgba(0,0,0,0.3);
+            /* 強い発光と立体感 */
+            box-shadow: 0 0 20px rgba(255, 87, 34, 0.6), inset 0 0 15px #fff;
+        }
+        /* ゴールの王冠アイコン */
+        .cell.goal::before {
+            content: "👑"; position: absolute; top: -22px; left: 50%;
+            transform: translateX(-50%); font-size: 2rem;
+            text-shadow: 0 0 8px gold; z-index: 1;
+        }
+        /* ゴールの数字位置調整 */
+        .cell.goal .cell-num {
+            top: auto; bottom: 2px; left: 50%; transform: translateX(-50%);
+            color: #d84315; font-size: 0.7rem;
+        }
+        /* ★★★ ここまで ★★★ */
+        
+        .cell-num { position: absolute; top: 1px; left: 2px; font-size: 0.5rem; color: #81d4fa; font-weight: bold; }
+        .cell-text {
+            margin-top: 0.8rem; font-size: 0.55rem; line-height: 1.1; text-align: center;
+            width: 98%; color: #555; flex-grow: 1; display: flex; align-items: center; justify-content: center;
+            word-break: break-all; padding-bottom: 12px; font-weight: bold;
+        }
+
+        .players-container {
+            display: flex; flex-wrap: wrap; gap: 1px; justify-content: center; align-items: flex-end;
+            width: 100%; position: absolute; bottom: 1px; z-index: 2; padding-bottom: 1px;
+        }
+        .player-icon {
+            width: 18px; height: 18px; border-radius: 50%; display: flex; justify-content: center; align-items: center;
+            font-size: 0.7rem; border: 1px solid white; box-shadow: 0 1px 2px rgba(0,0,0,0.3);
+            transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            font-weight: bold; color: #fff;
+        }
+        .player-icon.sleeping { filter: grayscale(100%); transform: scale(0.9); }
+        .player-icon.sleeping::after { content: "💤"; position: absolute; top: -5px; right: -5px; font-size: 0.8rem; }
+
+        /* コントロールパネル */
+        #controls {
+            flex-shrink: 0; height: 80px; margin-top: 5px;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px; box-shadow: 0 -3px 10px rgba(0,0,0,0.1);
+            display: flex; align-items: center; padding: 0 15px; justify-content: space-between;
+            border-bottom: 5px solid #ccc; transition: border-color 0.3s;
+        }
+        #turn-info { display: flex; flex-direction: column; justify-content: center; }
+        #turn-label { font-size: 0.7rem; color: #888; margin-bottom: 2px;}
+        #turn-player-display { font-size: 1.3rem; font-weight: bold; display: flex; align-items: center; gap: 8px; }
+        #dice-area { display: flex; align-items: center; gap: 10px; }
+        #dice-result-box {
+            width: 50px; height: 50px; background: #fff; border: 3px solid #4fc3f7; color: #0288d1;
+            font-size: 1.8rem; font-weight: bold; display: flex; justify-content: center; align-items: center;
+            border-radius: 8px;
+        }
+
+        /* 3Dサイコロ */
+        #dice-overlay {
+            display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(0,0,0,0.3); z-index: 300; justify-content: center; align-items: center; perspective: 1000px;
+        }
+        .cube {
+            width: 100px; height: 100px; position: relative;
+            transform-style: preserve-3d; transform: rotateX(0deg) rotateY(0deg); transition: transform 1s ease-out;
+        }
+        .face {
+            position: absolute; width: 100px; height: 100px;
+            background: white; border: 2px solid #ccc; border-radius: 10px;
+            display: flex; justify-content: center; align-items: center;
+            font-size: 3rem; font-weight: bold; color: #444; box-shadow: inset 0 0 20px rgba(0,0,0,0.1);
+        }
+        .front { transform: rotateY(0deg) translateZ(50px); }
+        .back { transform: rotateY(180deg) translateZ(50px); }
+        .right { transform: rotateY(90deg) translateZ(50px); }
+        .left { transform: rotateY(-90deg) translateZ(50px); }
+        .top { transform: rotateX(90deg) translateZ(50px); }
+        .bottom { transform: rotateX(-90deg) translateZ(50px); }
+        .dot { background: #333; border-radius: 50%; width: 18px; height: 18px; position: absolute; }
+        .face.one .dot { width: 25px; height: 25px; background: #f44336; }
+        .face.one { display:flex; justify-content:center; align-items:center; }
+        .face.two .d1 { top: 20px; left: 20px; } .face.two .d2 { bottom: 20px; right: 20px; }
+        .face.three .d1 { top: 15px; left: 15px; } .face.three .d2 { top: 41px; left: 41px; } .face.three .d3 { bottom: 15px; right: 15px; }
+        .face.four .d1 { top: 20px; left: 20px; } .face.four .d2 { top: 20px; right: 20px; } .face.four .d3 { bottom: 20px; left: 20px; } .face.four .d4 { bottom: 20px; right: 20px; }
+        .face.five .d1 { top: 15px; left: 15px; } .face.five .d2 { top: 15px; right: 15px; } .face.five .d3 { top: 41px; left: 41px; } .face.five .d4 { bottom: 15px; left: 15px; } .face.five .d5 { bottom: 15px; right: 15px; }
+        .face.six .d1 { top: 15px; left: 20px; } .face.six .d2 { top: 15px; right: 20px; } .face.six .d3 { top: 41px; left: 20px; } .face.six .d4 { top: 41px; right: 20px; } .face.six .d5 { bottom: 15px; left: 20px; } .face.six .d6 { bottom: 15px; right: 20px; }
+
+        /* モーダル */
+        #modal {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.6); z-index: 200; justify-content: center; align-items: center;
+            backdrop-filter: blur(4px);
+        }
+        #modal-content {
+            background: #fff; width: 85%; max-width: 550px; padding: 30px; border-radius: 30px;
+            text-align: center; border: 6px solid #b3e5fc;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            animation: bounceIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        #modal-text { font-size: 1.6rem; font-weight: bold; margin-bottom: 15px; white-space: pre-wrap; color: #444; }
+        #modal-sub { font-size: 1.1rem; color: #ef5350; margin-bottom: 25px; font-weight: bold;}
+        #modal-actions { display: flex; justify-content: center; gap: 15px; flex-wrap: wrap; margin-top: 20px; }
+        @keyframes bounceIn {
+            0% { transform: scale(0.3); opacity: 0; } 50% { transform: scale(1.05); opacity: 1; }
+            70% { transform: scale(0.9); } 100% { transform: scale(1); }
+        }
+        #mini-dice {
+            width: 60px; height: 60px; border: 3px solid #555; border-radius: 10px; font-size: 2rem;
+            display: flex; justify-content: center; align-items: center; margin: 0 auto 15px; font-weight: bold; background: #fff;
+        }
+
+    </style>
+</head>
+<body>
+    <div id="snow-container"></div>
+
+    <div id="setup-screen">
+        <h1><span class="title-icon">❄️</span> 冬休みすごろく <span class="title-icon">❄️</span></h1>
+        <div class="setup-box">
+            <div id="step-1">
+                <div class="step-title">1. あそぶ人数をえらんでね</div>
+                <div class="player-select-group">
+                    <button class="p-btn" onclick="showNameInput(1)">1</button>
+                    <button class="p-btn" onclick="showNameInput(2)">2</button>
+                    <button class="p-btn" onclick="showNameInput(3)">3</button>
+                    <button class="p-btn" onclick="showNameInput(4)">4</button>
+                    <button class="p-btn" onclick="showNameInput(5)">5</button>
+                    <button class="p-btn" onclick="showNameInput(6)">6</button>
+                </div>
+            </div>
+            <div id="step-2" style="display:none;">
+                <div class="step-title">2. おなまえをおしえてね</div>
+                <div id="name-input-area"></div>
+                <div style="margin-top:30px; display:flex; justify-content:center; gap:20px;">
+                    <button class="btn" onclick="backToStep1()" style="background:#eee;">もどる</button>
+                    <button class="btn primary" onclick="startGame()">マスをシャッフルして<br>スタート！</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="game-screen">
+        <div id="board"></div>
+        <div id="controls">
+            <div id="turn-info">
+                <div id="turn-label">つぎのばん</div>
+                <div id="turn-player-display">
+                    <span id="cp-icon"></span>
+                    <span id="cp-name"></span>
+                </div>
+            </div>
+            <div id="dice-area">
+                <div id="dice-result-box">?</div>
+                <button id="roll-btn" class="btn primary" onclick="start3DDiceRoll()">サイコロ</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="dice-overlay">
+        <div class="cube" id="cube">
+            <div class="face front one"><div class="dot"></div></div>
+            <div class="face back six"><div class="dot d1"></div><div class="dot d2"></div><div class="dot d3"></div><div class="dot d4"></div><div class="dot d5"></div><div class="dot d6"></div></div>
+            <div class="face right two"><div class="dot d1"></div><div class="dot d2"></div></div>
+            <div class="face left five"><div class="dot d1"></div><div class="dot d2"></div><div class="dot d3"></div><div class="dot d4"></div><div class="dot d5"></div></div>
+            <div class="face top three"><div class="dot d1"></div><div class="dot d2"></div><div class="dot d3"></div></div>
+            <div class="face bottom four"><div class="dot d1"></div><div class="dot d2"></div><div class="dot d3"></div><div class="dot d4"></div></div>
+        </div>
+    </div>
+
+    <div id="modal">
+        <div id="modal-content">
+            <div id="modal-text"></div>
+            <div id="modal-sub"></div>
+            <div id="modal-custom-area"></div>
+            <div id="modal-actions">
+                <button id="modal-ok-btn" class="btn" onclick="closeModal()">OK</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- データ定義 ---
+        const totalCells = 41;
+        const iconChars = ["🐶", "🐱", "🐼", "🐰", "🐨", "🐻"];
+        const pColors = ["#ef5350", "#42a5f5", "#66bb6a", "#ffa726", "#ab47bc", "#8d6e63"];
+
+        /* Types:
+           talk, action: 通常
+           move: 自動移動 (val: +2, -1 etc)
+           skip: 1回休み
+           roll_again: もう一度振る
+           reverse: 大逆転（1位と交代）
+           versus: 対決 (winVal, loseVal)
+           luck_custom: 運試し
+           kindness: 親切
+           choice_move: 選択移動（ボーナス）
+        */
+        const tasksSource = [
+            { text: "お年玉で\n何買った？", type: "talk" },
+            { text: "おもち\n何個食べた？", type: "talk" },
+            { text: "初もうでに\n行った？\nおみくじは\n引いた？", type: "talk" },
+            { text: "冬休みで\n一番笑ったことは\n何？", type: "talk" },
+            { text: "紅白歌合戦\n見た？", type: "talk" },
+            { text: "宿題いつ\n終わった？", type: "talk" },
+            { text: "冬休み食べた\nものの中で一番\nおいしかった\nものは？", type: "talk" },
+            { text: "今年の初夢、\nどんな夢を見た？", type: "talk" },
+            { text: "家のお手伝い\n何かした？", type: "talk" },
+            { text: "昨日は\n何時に起きた？", type: "talk" },
+            { text: "冬休みは\nどこかに\nおでかけした？", type: "talk" },
+            { text: "新年の抱負\n（がんばりたいこと）\nをどうぞ！", type: "talk" },
+            { text: "先生と\nじゃんけん！\n勝ったら2マス", type: "versus", winVal: 2, loseVal: 0 }, 
+            { text: "班のみんなで\n先生に\n「今年もよろしく\nおねがいします」\nとあいさつ", type: "action" },
+            { text: "今年の干支(午)\nモノマネ！", type: "action" },
+            { text: "その場で\nジャンプ10回！", type: "action" },
+            { text: "班の人と\n「今年もよろしく！」\nと言いながら\nハイタッチ", type: "action" },
+            { text: "【大チャンス】\n先生と10秒\nにらめっこして\n勝ったら3マス進む", type: "versus", winVal: 3, loseVal: 0 },
+            { text: "楽しみな\n学校行事は？", type: "talk" },
+            { text: "起立！\n大きく背伸び", type: "action" },
+            { text: "【ラッキー】\n2マスすすむ", type: "move", val: 2 },
+            { text: "【超ラッキー】\nもう一回ふる", type: "roll_again" }, 
+            { text: "【ワープ】\n5マスすすむ！", type: "move", val: 5 },
+            { text: "【残念】\n1マスもどる", type: "move", val: -1 },
+            { text: "宿題忘れてた…\n2マスもどる", type: "move", val: -2 },
+            { text: "【こたつで寝る】\n1回休み", type: "skip" }, 
+            { text: "【大逆転】\nトップと交代", type: "reverse" },
+            { text: "【新年の運試し】\n偶数なら1歩進む\n奇数なら2歩戻る", type: "luck_custom" },
+            { text: "【親切】\n誰かを\n1マス進める", type: "kindness" },
+            { text: "【ふりだし!?】\n3マスもどる", type: "move", val: -3 },
+            { text: "節分で鬼役\nやりたい？\n豆まく役？", type: "talk" },
+            { text: "冬のスポーツ\n（スキー・スケート）\nしたことある？", type: "talk" },
+            { text: "好きな\nおでんの具は？", type: "talk" },
+            { text: "次の学年で\n楽しみなことは？", type: "talk" },
+            { text: "3学期\n係・委員会\n何やりたい？", type: "talk" },
+            { text: "右の人の肩を\n10回\nたたいてあげる", type: "action" },
+            { text: "班のみんなを\n一人ずつ\nほめる！", type: "action" },
+            { text: "沖縄と北海道、\nもし旅行に\n行くならどっち？", type: "talk" },
+            { text: "10秒間で\nできるだけ\n拍手する！", type: "action" },
+            { text: "【ボーナス】\n好きな数だけ\n進める（1〜3）", type: "choice_move" }
+        ];
+
+        let players = [];
+        let turn = 0;
+        let boardTasks = [];
+        let isMoving = false;
+        let selectedNum = 0;
+        let currentTaskObj = null;
+
+        // --- 初期化 ---
+        window.onload = function() {
+            createSnow();
+        };
+
+        function createSnow() {
+            const snowContainer = document.getElementById('snow-container');
+            const colors = ['#FFF', '#E3F2FD', '#FFF9C4'];
+            for(let i=0; i<40; i++) {
+                const f = document.createElement('div');
+                f.className = 'snowflake';
+                f.innerHTML = Math.random() > 0.5 ? '❄' : '●';
+                f.style.left = Math.random()*100+'vw';
+                f.style.color = colors[Math.floor(Math.random()*colors.length)];
+                f.style.animationDuration = (Math.random()*5+8)+'s';
+                f.style.fontSize = (Math.random()*15+10)+'px';
+                f.style.animationDelay = Math.random()*5+'s';
+                snowContainer.appendChild(f);
+            }
+        }
+
+        function showNameInput(num) {
+            selectedNum = num;
+            const area = document.getElementById('name-input-area');
+            area.innerHTML = "";
+            area.style.display = "block";
+            
+            for(let i=0; i<num; i++) {
+                const row = document.createElement('div');
+                row.className = 'input-row';
+                row.innerHTML = `
+                    <div class="player-label" style="color:${pColors[i]}">${iconChars[i]}</div>
+                    <input type="text" class="name-input" id="p-name-${i}" value="プレイヤー${i+1}" placeholder="おなまえ">
+                `;
+                area.appendChild(row);
+            }
+            
+            document.getElementById('step-1').style.display = 'none';
+            document.getElementById('step-2').style.display = 'block';
+        }
+
+        function backToStep1() {
+            document.getElementById('step-1').style.display = 'block';
+            document.getElementById('step-2').style.display = 'none';
+        }
+
+        function startGame() {
+            players = [];
+            for(let i=0; i<selectedNum; i++) {
+                const nameVal = document.getElementById(`p-name-${i}`).value;
+                players.push({ id: i, name: nameVal || `プレイヤー${i+1}`, pos: 0, finished: false, skipTurn: false });
+            }
+            
+            let shuffled = [...tasksSource];
+            shuffled.sort(() => Math.random() - 0.5);
+            boardTasks = shuffled.slice(0, 40); 
+            
+            createBoard();
+            updateTurnDisplay();
+            
+            document.getElementById('setup-screen').style.display = 'none';
+            document.getElementById('game-screen').style.display = 'flex';
+        }
+
+        // --- 盤面生成 ---
+        function createBoard() {
+            const board = document.getElementById('board');
+            board.innerHTML = '';
+            
+            for (let i = 0; i <= totalCells; i++) {
+                const cell = document.createElement('div');
+                cell.className = 'cell';
+                cell.id = `cell-${i}`;
+                
+                let rowIndex = Math.floor(i / 8); 
+                let gridRow = rowIndex + 1;
+                let gridCol;
+                
+                if (rowIndex % 2 === 0) {
+                    gridCol = (i % 8) + 1; 
+                } else {
+                    gridCol = 8 - (i % 8); 
+                }
+                
+                cell.style.gridRow = gridRow;
+                cell.style.gridColumn = gridCol;
+
+                const numSpan = document.createElement('span');
+                numSpan.className = 'cell-num';
+                
+                if (i === 0) {
+                    cell.classList.add('start'); cell.innerText = 'START';
+                } else if (i === totalCells) {
+                    cell.classList.add('goal'); cell.innerText = 'GOAL';
+                    numSpan.innerText = i; cell.appendChild(numSpan);
+                } else {
+                    numSpan.innerText = i; cell.appendChild(numSpan);
+                    const task = boardTasks[i-1];
+                    if(task) {
+                        const txt = document.createElement('div');
+                        txt.className = 'cell-text';
+                        txt.innerText = task.text;
+                        cell.appendChild(txt);
+                    }
+                }
+                const pc = document.createElement('div');
+                pc.className = 'players-container';
+                pc.id = `p-con-${i}`;
+                cell.appendChild(pc);
+                board.appendChild(cell);
+            }
+            renderPlayers();
+        }
+
+        function renderPlayers() {
+            document.querySelectorAll('.cell').forEach(c => c.classList.remove('has-player'));
+            document.querySelectorAll('.players-container').forEach(e => e.innerHTML = '');
+            players.forEach(p => {
+                if(!p.finished) {
+                    const c = document.getElementById(`cell-${p.pos}`);
+                    if(c) c.classList.add('has-player');
+                }
+            });
+            players.forEach(p => {
+                const icon = document.createElement('div');
+                icon.className = 'player-icon';
+                icon.innerText = iconChars[p.id];
+                icon.style.backgroundColor = pColors[p.id];
+                if(p.finished) icon.style.opacity = 0.5;
+                if(p.skipTurn) icon.classList.add('sleeping');
+                const target = document.getElementById(`p-con-${p.pos}`);
+                if(target) target.appendChild(icon);
+            });
+        }
+
+        function updateTurnDisplay() {
+            const p = players[turn];
+            document.getElementById('cp-icon').innerText = iconChars[p.id];
+            document.getElementById('cp-name').innerText = p.name;
+            document.getElementById('controls').style.borderBottomColor = pColors[p.id];
+        }
+
+        // --- ゲーム進行 ---
+        function start3DDiceRoll() {
+            if(isMoving) return;
+            isMoving = true;
+            document.getElementById('dice-overlay').style.display = 'flex';
+            const cube = document.getElementById('cube');
+            cube.style.transition = "transform 0.1s linear";
+            let count = 0;
+            const spinInterval = setInterval(() => {
+                const rx = Math.floor(Math.random() * 360);
+                const ry = Math.floor(Math.random() * 360);
+                cube.style.transform = `rotateX(${rx}deg) rotateY(${ry}deg)`;
+                count++;
+                if(count > 10) {
+                    clearInterval(spinInterval);
+                    finalizeDiceRoll();
+                }
+            }, 100);
+        }
+
+        function finalizeDiceRoll() {
+            const val = Math.floor(Math.random()*6)+1;
+            const cube = document.getElementById('cube');
+            cube.style.transition = "transform 1s cubic-bezier(0.175, 0.885, 0.32, 1.275)";
+            let rx = 0; let ry = 0; const extraRot = 360 * 2; 
+            switch(val) {
+                case 1: rx = 0; ry = 0; break;
+                case 6: rx = 0; ry = 180; break;
+                case 2: rx = 0; ry = -90; break;
+                case 5: rx = 0; ry = 90; break;
+                case 3: rx = -90; ry = 0; break;
+                case 4: rx = 90; ry = 0; break;
+            }
+            cube.style.transform = `rotateX(${rx + extraRot}deg) rotateY(${ry + extraRot}deg)`;
+            setTimeout(() => {
+                document.getElementById('dice-overlay').style.display = 'none';
+                document.getElementById('dice-result-box').innerText = val; 
+                movePlayer(val);
+            }, 1500);
+        }
+
+        async function movePlayer(steps, triggerTask = true) {
+            const p = players[turn];
+            if(p.finished) { nextTurn(); return; }
+            const dir = steps > 0 ? 1 : -1;
+            const count = Math.abs(steps);
+            for(let i=0; i<count; i++) {
+                p.pos += dir;
+                if(p.pos < 0) p.pos = 0;
+                if(p.pos > totalCells) p.pos = totalCells; 
+                renderPlayers();
+                await new Promise(r => setTimeout(r, 300));
+                if(p.pos === totalCells) break; 
+            }
+            if (p.pos >= totalCells) {
+                p.pos = totalCells; p.finished = true;
+                renderPlayers();
+                showModal("🎉 ゴール！！", `${p.name}さん、おめでとう！`, {type:'goal'});
+                fireConfetti();
+            } else {
+                if(triggerTask) {
+                    const taskIndex = p.pos - 1;
+                    const task = boardTasks[taskIndex];
+                    if(task) {
+                        showModal(task.text, "", task);
+                    } else {
+                        nextTurn();
+                    }
+                } else {
+                    nextTurn();
+                }
+            }
+        }
+
+        // --- モーダル制御変数 ---
+        let pendingMove = 0;
+        let pendingSkip = false;
+        let pendingReverse = false;
+        let pendingRollAgain = false;
+
+        function showModal(main, sub, taskObj) {
+            const m = document.getElementById('modal');
+            const txt = document.getElementById('modal-text');
+            const subTxt = document.getElementById('modal-sub');
+            const customArea = document.getElementById('modal-custom-area');
+            const okBtn = document.getElementById('modal-ok-btn');
+
+            txt.innerText = main;
+            subTxt.innerText = sub;
+            customArea.innerHTML = "";
+            okBtn.style.display = "inline-block";
+            
+            pendingMove = 0;
+            pendingSkip = false;
+            pendingReverse = false;
+            pendingRollAgain = false;
+            currentTaskObj = taskObj; 
+
+            if(taskObj.type === 'move') {
+                pendingMove = taskObj.val;
+                subTxt.innerText = "OKを押すと移動します";
+            } 
+            else if(taskObj.type === 'roll_again') {
+                pendingRollAgain = true;
+                subTxt.innerText = "ラッキー！もう一度サイコロを振ってね！";
+            }
+            else if(taskObj.type === 'skip') {
+                pendingSkip = true;
+                subTxt.innerText = "次は１回休みです…ドンマイ！";
+            }
+            else if(taskObj.type === 'reverse') {
+                pendingReverse = true;
+                let topPlayer = null; let maxPos = -1;
+                players.forEach(p => {
+                    if(p.id !== turn && !p.finished) {
+                        if(p.pos > maxPos) { maxPos = p.pos; topPlayer = p; }
+                    }
+                });
+                if(topPlayer && topPlayer.pos > players[turn].pos) {
+                    subTxt.innerText = `トップの「${topPlayer.name}」さんと場所を交代します！`;
+                } else {
+                    subTxt.innerText = "あなたがトップ（またはトップと同じ）なので、交代はおきません！";
+                    pendingReverse = false;
+                }
+            }
+            else if(taskObj.type === 'versus') {
+                okBtn.style.display = "none";
+                customArea.innerHTML = `
+                    <p>先生と勝負！</p>
+                    <button class="btn win" onclick="resolveVersus(true)">勝った！</button>
+                    <button class="btn lose" onclick="resolveVersus(false)">負けた…</button>
+                `;
+            }
+            else if(taskObj.type === 'luck_custom') {
+                okBtn.style.display = "none";
+                customArea.innerHTML = `
+                    <div id="mini-dice">?</div>
+                    <button class="btn" onclick="resolveLuck()">運試しのサイコロを振る</button>
+                `;
+            }
+            else if(taskObj.type === 'choice_move') {
+                okBtn.style.display = "none";
+                customArea.innerHTML = `
+                    <p>好きな数を選んでね</p>
+                    <button class="btn" onclick="resolveChoice(1)">1</button>
+                    <button class="btn" onclick="resolveChoice(2)">2</button>
+                    <button class="btn" onclick="resolveChoice(3)">3</button>
+                `;
+            }
+            else if(taskObj.type === 'kindness') {
+                okBtn.style.display = "none";
+                let html = "<p>誰を進める？</p>";
+                let found = false;
+                players.forEach(p => {
+                    if(p.id !== turn && !p.finished) {
+                        html += `<button class="btn" style="border-color:${pColors[p.id]}" onclick="resolveKindness(${p.id})">${p.name}</button>`;
+                        found = true;
+                    }
+                });
+                if(!found) html += "<p>（他に誰もいないのでスキップ）</p><button class='btn' onclick='closeModal()'>OK</button>";
+                customArea.innerHTML = html;
+            }
+            m.style.display = 'flex';
+        }
+
+        // アクション解決関数
+        function resolveVersus(win) {
+            document.getElementById('modal-custom-area').innerHTML = "";
+            const t = currentTaskObj;
+            if(win) {
+                const val = t.winVal;
+                document.getElementById('modal-sub').innerText = `おめでとう！${val}マス進むよ！`;
+                pendingMove = val;
+            } else {
+                const val = t.loseVal;
+                if(val < 0) {
+                    document.getElementById('modal-sub').innerText = `残念… ${Math.abs(val)}マス戻る！`;
+                    pendingMove = val;
+                } else {
+                    document.getElementById('modal-sub').innerText = "残念… 次がんばろう！";
+                    pendingMove = 0;
+                }
+            }
+            document.getElementById('modal-ok-btn').style.display = "inline-block";
+        }
+
+        function resolveLuck() {
+            const md = document.getElementById('mini-dice');
+            let c = 0;
+            const t = setInterval(() => {
+                md.innerText = Math.floor(Math.random()*6)+1;
+                c++;
+                if(c > 8) {
+                    clearInterval(t);
+                    const val = Math.floor(Math.random()*6)+1;
+                    md.innerText = val;
+                    if(val % 2 === 0) {
+                        document.getElementById('modal-sub').innerText = `「${val}」は偶数！ 1マス進む！`;
+                        pendingMove = 1;
+                    } else {
+                        document.getElementById('modal-sub').innerText = `「${val}」は奇数… 2マス戻る！`;
+                        pendingMove = -2;
+                    }
+                    document.getElementById('modal-custom-area').innerHTML = "";
+                    document.getElementById('modal-ok-btn').style.display = "inline-block";
+                }
+            }, 50);
+        }
+
+        function resolveChoice(steps) {
+            document.getElementById('modal-custom-area').innerHTML = "";
+            document.getElementById('modal-sub').innerText = `${steps}マス進みます！`;
+            pendingMove = steps;
+            document.getElementById('modal-ok-btn').style.display = "inline-block";
+        }
+
+        async function resolveKindness(targetId) {
+            document.getElementById('modal').style.display = 'none';
+            const p = players[targetId];
+            if(p.pos < totalCells) {
+                p.pos++;
+                renderPlayers();
+                await new Promise(r => setTimeout(r, 500)); 
+            }
+            nextTurn();
+        }
+
+        async function closeModal() {
+            document.getElementById('modal').style.display = 'none';
+            
+            if(pendingRollAgain) {
+                isMoving = false;
+                return;
+            }
+
+            if(pendingSkip) {
+                players[turn].skipTurn = true;
+                renderPlayers();
+            }
+            if(pendingReverse) {
+                let topPlayer = null; let maxPos = -1;
+                players.forEach(p => {
+                    if(p.id !== turn && !p.finished) {
+                        if(p.pos > maxPos) { maxPos = p.pos; topPlayer = p; }
+                    }
+                });
+                if(topPlayer) {
+                    const myPos = players[turn].pos;
+                    const topPos = topPlayer.pos;
+                    players[turn].pos = topPos;
+                    topPlayer.pos = myPos;
+                    renderPlayers();
+                    await new Promise(r => setTimeout(r, 800));
+                }
+                nextTurn();
+                return;
+            }
+            if(pendingMove !== 0) {
+                await movePlayer(pendingMove, false);
+            } else {
+                if(!players[turn].finished) {
+                    nextTurn();
+                }
+            }
+        }
+
+        function nextTurn() {
+            isMoving = false;
+            if(players.every(p => p.finished)) {
+                document.getElementById('turn-info').innerHTML = "全員ゴール！お疲れ様でした！";
+                return;
+            }
+            let nextP = (turn + 1) % players.length;
+            let loopCount = 0;
+            while(players[nextP].finished) {
+                nextP = (nextP + 1) % players.length;
+                loopCount++;
+                if(loopCount > players.length) return;
+            }
+            turn = nextP;
+            if(players[turn].skipTurn) {
+                setTimeout(() => {
+                    alert(`${players[turn].name}さんは「休み」なのでスキップします！💤`);
+                    players[turn].skipTurn = false;
+                    renderPlayers();
+                    nextTurn();
+                }, 100);
+                return;
+            }
+            updateTurnDisplay();
+            document.getElementById('dice-result-box').innerText = "?";
+        }
+
+        function fireConfetti() {
+            const c = ['#f00', '#0f0', '#00f', '#ff0', '#f0f'];
+            for(let i=0; i<60; i++) {
+                const d = document.createElement('div');
+                d.style.position='fixed'; d.style.zIndex=999;
+                d.style.left=Math.random()*100+'vw'; d.style.top='-10px';
+                d.style.width='10px'; d.style.height='10px';
+                d.style.background=c[Math.floor(Math.random()*c.length)];
+                d.style.transition='top 3s ease-in';
+                document.body.appendChild(d);
+                setTimeout(()=>d.style.top='105vh',10);
+                setTimeout(()=>d.remove(),3000);
+            }
+        }
+    </script>
+</body>
+</html>
